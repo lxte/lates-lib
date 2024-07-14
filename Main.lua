@@ -150,7 +150,7 @@ end
 local Blur
 
 if (identifyexecutor) then
-	Screen = (Services.Insert:LoadLocalAsset(18490507748));
+	Screen = game:GetObjects("rbxassetid://18490507748")[1];
 	Blur = loadstring(game:HttpGet("https://raw.githubusercontent.com/lxte/lates-lib/main/Assets/Blur.lua"))();
 else
 	Screen = (script.Parent);
