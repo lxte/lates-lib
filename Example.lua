@@ -1,8 +1,8 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/lxte/lates-lib/main/Main.lua"))()
+local Library = require(script.Parent)
 local Window = Library:CreateWindow({
 	Title = "Arc",
 	Size = UDim2.fromOffset(500, 300),
-	Transparency = 0.05,
+	Transparency = 0.2,
 	Blurring = true,
 	Theme = "Light",
 })
@@ -52,12 +52,12 @@ local Themes = {
 
 --// Sections
 
-Window:AddSection({
+Window:AddTabSection({
 	Name = "Main",
 	Order = 1,
 })
 
-Window:AddSection({
+Window:AddTabSection({
 	Name = "Settings",
 	Order = 2,
 })
@@ -69,11 +69,17 @@ local Main = Window:AddTab({
 	Section = "Main",
 })
 
+Window:AddSection({ Name = "Non Interactable", Tab = Main }) 
+
+
 Window:AddParagraph({
-	Title = "components",
-	Description = "this one of them",
+	Title = "Paragraph",
+	Description = "Insert any important text here.",
 	Tab = Main
 }) 
+
+Window:AddSection({ Name = "Interactable", Tab = Main }) 
+
 
 Window:AddButton({
 	Title = "Button",
@@ -142,4 +148,4 @@ Window:AddDropdown({
 	end,
 }) 
 
-Window:SetTheme(Themes.Light)
+Window:SetTheme(Themes.Dark)
