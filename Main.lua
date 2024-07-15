@@ -65,7 +65,6 @@ local Player = {
 	GUI = LocalPlayer.PlayerGui;
 }
 
-local Type = nil
 local Tween = function(Object : Instance, Speed : number, Properties : {},  Info : { EasingStyle: Enum?, EasingDirection: Enum? })
 	local Style, Direction
 
@@ -109,7 +108,6 @@ end
 
 local Drag = function(Canvas)
 	if Canvas then
-		print(Type)
 		local Dragging;
 		local DragInput;
 		local Start;
@@ -121,7 +119,7 @@ local Drag = function(Canvas)
 		end
 
 		Connect(Canvas.InputBegan, function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch and not Type then
+			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 				Dragging = true
 				Start = Input.Position
 				StartPosition = Canvas.Position
@@ -135,7 +133,7 @@ local Drag = function(Canvas)
 		end)
 
 		Connect(Canvas.InputChanged, function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch and not Type then
+			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
 				DragInput = Input
 			end
 		end)
@@ -148,73 +146,11 @@ local Drag = function(Canvas)
 	end
 end
 
-Resizing = { 
-	TopLeft = { X = Vector2.new(-1, 0),   Y = Vector2.new(0, -1)};
-	TopRight = { X = Vector2.new(1, 0),    Y = Vector2.new(0, -1)};
-	BottomLeft = { X = Vector2.new(-1, 0),   Y = Vector2.new(0, 1)};
-	BottomRight = { X = Vector2.new(1, 0),    Y = Vector2.new(0, 1)};
-}
-
-Resizable = function(Tab, Minimum, Maximum)
-	task.spawn(function()
-		local MousePos, Size, UIPos = nil, nil, nil
-
-		if Tab and Tab:FindFirstChild("Resize") then
-			local Positions = Tab:FindFirstChild("Resize")
-
-			for Index, Types in next, Positions:GetChildren() do
-				Connect(Types.InputBegan, function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-						Type = Types
-						MousePos = Vector2.new(Player.Mouse.X, Player.Mouse.Y)
-						Size = Tab.AbsoluteSize
-						UIPos = Tab.Position
-					end
-				end)
-
-				Connect(Types.InputEnded, function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-						Type = nil
-					end
-				end)
-			end
-		end
-
-		local Resize = function(Delta)
-			if Type and MousePos and Size and UIPos and Tab:FindFirstChild("Resize")[Type.Name] == Type then
-				local Mode = Resizing[Type.Name]
-				local NewSize = Vector2.new(Size.X + Delta.X * Mode.X.X, Size.Y + Delta.Y * Mode.Y.Y)
-				NewSize = Vector2.new(math.clamp(NewSize.X, Minimum.X, Maximum.X), math.clamp(NewSize.Y, Minimum.Y, Maximum.Y))
-
-				local AnchorOffset = Vector2.new(Tab.AnchorPoint.X * Size.X, Tab.AnchorPoint.Y * Size.Y)
-				local NewAnchorOffset = Vector2.new(Tab.AnchorPoint.X * NewSize.X, Tab.AnchorPoint.Y * NewSize.Y)
-				local DeltaAnchorOffset = NewAnchorOffset - AnchorOffset
-
-				Tab.Size = UDim2.new(0, NewSize.X, 0, NewSize.Y)
-
-				local NewPosition = UDim2.new(
-					UIPos.X.Scale, 
-					UIPos.X.Offset + DeltaAnchorOffset.X * Mode.X.X,
-					UIPos.Y.Scale,
-					UIPos.Y.Offset + DeltaAnchorOffset.Y * Mode.Y.Y
-				)
-				Tab.Position = NewPosition
-			end
-		end
-
-		Connect(Player.Mouse.Move, function()
-			if Type then
-				Resize(Vector2.new(Player.Mouse.X, Player.Mouse.Y) - MousePos)
-			end
-		end)
-	end)
-end
-
 --// Setup [UI]
 local Blur
 
 if (identifyexecutor) then
-	Screen = game:GetObjects("rbxassetid://18490507748")[1];
+	Screen = Services.Insert:LoadLocalAsset("rbxassetid://18490507748");
 	Blur = loadstring(game:HttpGet("https://raw.githubusercontent.com/lxte/lates-lib/main/Assets/Blur.lua"))();
 else
 	Screen = (script.Parent);
@@ -275,6 +211,7 @@ function Animations:Close(Window: CanvasGroup)
 
 	task.wait(.25)
 	Window.Size = Original
+	Window.Visible = false
 end
 
 
@@ -319,16 +256,15 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 	--// UI Blur & More
 	Drag(Window);
-	Resizable(Window, Vector2.new(391, 256), Vector2.new(9e9, 9e9))
 	Setup.Transparency = Settings.Transparency or 0
 	Setup.Size = Settings.Size
 	Setup.ThemeMode = Settings.Theme or "Dark"
-	
+
 	if Settings.Blurring then
 		Blurs[Settings.Title] = Blur.new(Window, 5)
 		BlurEnabled = true
 	end
-	
+
 	if Settings.MinimizeKeybind then
 		Setup.Keybind = Settings.MinimizeKeybind
 	end
@@ -562,20 +498,20 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Visible = true,
 		})
 	end
-	
+
 	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Tab: Instance, Callback: any }) 
 		local Dropdown = Clone(Components["Dropdown"]);
 		local Title, Description = Options:GetLabels(Dropdown);
 		local Text = Dropdown["Main"].Options;
-		
+
 		Connect(Dropdown.MouseButton1Click, function()
 			local Example = Clone(Examples["DropdownExample"]);
 			local Buttons = Example["Top"]["Buttons"];
-			
+
 			Tween(BG, .25, { BackgroundTransparency = 0.6 });
 			SetProperty(Example, { Parent = Window });
 			Animations:Open(Example, 0, true)
-			
+
 			for Index, Button in next, Buttons:GetChildren() do
 				if Button:IsA("TextButton") then
 					Animations:Component(Button, true)
@@ -588,12 +524,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					end)
 				end
 			end
-			
+
 			for Index, Option in next, Settings.Options do
 				local Button = Clone(Examples["DropdownButtonExample"]);
 				local Title, Description = Options:GetLabels(Button);
 				local Selected = Button["Value"];
-				
+
 				Animations:Component(Button);
 				SetProperty(Title, { Text = Index });
 				SetProperty(Button, { Parent = Example.ScrollingFrame, Visible = true });
@@ -601,12 +537,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 				Connect(Button.MouseButton1Click, function() 
 					local NewValue = not Selected.Value 
-					
+
 					if NewValue then
 						Tween(Button, .25, { BackgroundColor3 = Theme.Interactables });
 						Settings.Callback(Option)
 						Text.Text = Index
-						
+
 						for _, Others in next, Example:GetChildren() do
 							if Others:IsA("TextButton") and Others ~= Button then
 								Others.BackgroundColor3 = Theme.Component
@@ -615,7 +551,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					else
 						Tween(Button, .25, { BackgroundColor3 = Theme.Component });
 					end
-					
+
 					Selected.Value = NewValue
 					Tween(BG, .25, { BackgroundTransparency = 1 });
 					Animations:Close(Example);
@@ -624,7 +560,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				end)
 			end
 		end)
-		
+
 		Animations:Component(Dropdown);
 		SetProperty(Title, { Text = Settings.Title });
 		SetProperty(Description, { Text = Settings.Description });
@@ -716,7 +652,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Label.TextColor3 = Theme.Description
 				end
 			end,
-			
+
 			["Options"] = function(Label)
 				if Label:IsA("TextLabel") and Label.Parent.Name == "Main" then
 					Label.TextColor3 = Theme.Title
@@ -773,11 +709,11 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Stroke.Color = Theme.Outline
 				end
 			end,
-			
+
 			["DropdownExample"] = function(Label)
 				Label.BackgroundColor3 = Theme.Secondary
 			end,
-			
+
 			["Underline"] = function(Label)
 				if Label:IsA("Frame") then
 					Label.BackgroundColor3 = Theme.Outline
@@ -828,7 +764,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end
 		end
 	end
-	
+
 	--// Changing Settings
 
 	function Options:SetSetting(Setting, Value) --// Available settings - Size, Transparency, Blur, Theme
