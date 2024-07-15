@@ -492,7 +492,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	function Options:AddSection(Settings: { Name: string, Tab: Instance }) 
 		local Section = Clone(Components["Section"]);
 		SetProperty(Section, {
-			Name = Settings.Name,
 			Text = Settings.Name,
 			Parent = Settings.Tab,
 			Visible = true,
@@ -713,7 +712,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		Names = {	
 			["Paragraph"] = function(Label)
 				if Label:IsA("TextButton") then
-					Label.BackgroundColor3 = Color(Theme.Component, 10);
+					Label.BackgroundColor3 = Color(Theme.Component, 5, "Dark");
 				end
 			end,
 			
@@ -726,6 +725,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			["Description"] = function(Label)
 				if Label:IsA("TextLabel") then
 					Label.TextColor3 = Theme.Description
+				end
+			end,
+			
+			["Section"] = function(Label)
+				if Label:IsA("TextLabel") then
+					Label.TextColor3 = Theme.Title
 				end
 			end,
 
