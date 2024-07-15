@@ -1,10 +1,10 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/lxte/lates-lib/main/Main.lua"))()
 local Window = Library:CreateWindow({
-	Title = "Arc",
+	Title = "???",
 	Size = UDim2.fromOffset(500, 300),
-	Transparency = 0.2,
-	Blurring = true,
-	Theme = "Light",
+	Transparency = 0.05,
+	Blurring = false,
+	Theme = "Dark",
 })
 
 local Themes = {
@@ -34,6 +34,26 @@ local Themes = {
 		Secondary = Color3.fromRGB(35, 35, 35),
 		Component = Color3.fromRGB(40, 40, 40),
 		Interactables = Color3.fromRGB(45, 45, 45),
+
+		--// Text:
+		Tab = Color3.fromRGB(200, 200, 200),
+		Title = Color3.fromRGB(240,240,240),
+		Description = Color3.fromRGB(200,200,200),
+
+		--// Outlines:
+		Shadow = Color3.fromRGB(0, 0, 0),
+		Outline = Color3.fromRGB(40, 40, 40),
+
+		--// Image:
+		Icon = Color3.fromRGB(220, 220, 220),
+	},
+
+    Void = {
+		--// Frames:
+		Primary = Color3.fromRGB(15, 15, 15),
+		Secondary = Color3.fromRGB(20, 20, 20),
+		Component = Color3.fromRGB(25, 25, 25),
+		Interactables = Color3.fromRGB(30, 30, 30),
 
 		--// Text:
 		Tab = Color3.fromRGB(200, 200, 200),
@@ -148,4 +168,4 @@ Window:AddDropdown({
 	end,
 }) 
 
-Window:SetTheme(Themes.Dark)
+Window:SetTheme(Themes.Void)
