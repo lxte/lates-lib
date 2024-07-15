@@ -174,10 +174,10 @@ local StoredInfo = {
 };
 
 --// Animations [Window]
-function Animations:Open(Window: CanvasGroup, Transparency: number)
-	local Original = Setup.Size
+function Animations:Open(Window: CanvasGroup, Transparency: number, UseCurrentSize: boolean)
+	local Original = (UseCurrentSize and Window.Size) or Setup.Size
 	local Multiplied = Multiply(Original, 1.1)
-	local Shadow = Window:FindFirstChild("UIStroke")
+	local Shadow = Window:FindFirstChildOfClass("UIStroke")
 
 
 	SetProperty(Shadow, { Transparency = 1 })
@@ -197,7 +197,7 @@ end
 function Animations:Close(Window: CanvasGroup)
 	local Original = Window.Size
 	local Multiplied = Multiply(Original, 1.1)
-	local Shadow = Window:FindFirstChild("UIStroke")
+	local Shadow = Window:FindFirstChildOfClass("UIStroke")
 
 	SetProperty(Window, {
 		Size = Original,
@@ -234,16 +234,18 @@ end
 
 --// Library [Window]
 
-function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, Blurring: boolean, Theme: string })
+function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string })
 	local Window = Clone(Screen:WaitForChild("Main"));
 	local Sidebar = Window:FindFirstChild("Sidebar");
 	local Holder = Window:FindFirstChild("Main");
+	local BG = Window:FindFirstChild("BackgroundShadow");
 	local Tab = Sidebar:FindFirstChild("Tab");
 
 	local Options = {};
 	local Examples = {};
 	local Opened = true;
-	local Maximized = false
+	local Maximized = false;
+	local BlurEnabled = false
 
 	for Index, Example in next, Window:GetDescendants() do
 		if Example.Name:find("Example") and not Examples[Example.Name] then
@@ -255,15 +257,21 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	Drag(Window);
 	Setup.Transparency = Settings.Transparency or 0
 	Setup.Size = Settings.Size
-
+	Setup.ThemeMode = Settings.Theme or "Dark"
+	
 	if Settings.Blurring then
 		Blurs[Settings.Title] = Blur.new(Window, 5)
+		BlurEnabled = true
+	end
+	
+	if Settings.MinimizeKeybind then
+		Setup.Keybind = Settings.MinimizeKeybind
 	end
 
 	--// Animate
 	local Close = function()
 		if Opened then
-			if Settings.Blurring then
+			if BlurEnabled then
 				Blurs[Settings.Title].root.Parent = nil
 			end
 
@@ -274,7 +282,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Animations:Open(Window, Setup.Transparency)
 			Opened = true
 			task.wait(.1)
-			if Settings.Blurring then
+			if BlurEnabled then
 				Blurs[Settings.Title].root.Parent = workspace.CurrentCamera
 			end
 		end
@@ -291,7 +299,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				elseif Name == "Maximize" then
 					if Maximized then
 						Maximized = false
-						Tween(Window, .15, { Size = Settings.Size});
+						Tween(Window, .15, { Size = Setup.Size });
 					else
 						Maximized = true
 						Tween(Window, .15, { Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0.5, 0.5 )});
@@ -489,6 +497,78 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Visible = true,
 		})
 	end
+	
+	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Tab: Instance, Callback: any }) 
+		local Dropdown = Clone(Components["Dropdown"]);
+		local Title, Description = Options:GetLabels(Dropdown);
+		local Text = Dropdown["Main"].Options;
+		
+		Connect(Dropdown.MouseButton1Click, function()
+			local Example = Clone(Examples["DropdownExample"]);
+			local Buttons = Example["Top"]["Buttons"];
+			
+			Tween(BG, .25, { BackgroundTransparency = 0.6 });
+			SetProperty(Example, { Parent = Window });
+			Animations:Open(Example, 0, true)
+			
+			for Index, Button in next, Buttons:GetChildren() do
+				if Button:IsA("TextButton") then
+					Animations:Component(Button, true)
+
+					Connect(Button.MouseButton1Click, function()
+						Tween(BG, .25, { BackgroundTransparency = 1 });
+						Animations:Close(Example);
+						task.wait(2)
+						Destroy(Example);
+					end)
+				end
+			end
+			
+			for Index, Option in next, Settings.Options do
+				local Button = Clone(Examples["DropdownButtonExample"]);
+				local Title, Description = Options:GetLabels(Button);
+				local Selected = Button["Value"];
+				
+				Animations:Component(Button);
+				SetProperty(Title, { Text = Index });
+				SetProperty(Button, { Parent = Example.ScrollingFrame, Visible = true });
+				Destroy(Description);
+
+				Connect(Button.MouseButton1Click, function() 
+					local NewValue = not Selected.Value 
+					
+					if NewValue then
+						Tween(Button, .25, { BackgroundColor3 = Theme.Interactables });
+						Settings.Callback(Option)
+						Text.Text = Index
+						
+						for _, Others in next, Example:GetChildren() do
+							if Others:IsA("TextButton") and Others ~= Button then
+								Others.BackgroundColor3 = Theme.Component
+							end
+						end
+					else
+						Tween(Button, .25, { BackgroundColor3 = Theme.Component });
+					end
+					
+					Selected.Value = NewValue
+					Tween(BG, .25, { BackgroundTransparency = 1 });
+					Animations:Close(Example);
+					task.wait(2)
+					Destroy(Example);
+				end)
+			end
+		end)
+		
+		Animations:Component(Dropdown);
+		SetProperty(Title, { Text = Settings.Title });
+		SetProperty(Description, { Text = Settings.Description });
+		SetProperty(Dropdown, {
+			Name = Settings.Title,
+			Parent = Settings.Tab,
+			Visible = true,
+		})
+	end
 
 	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, Tab: Instance, Callback: any }) 
 		local Slider = Clone(Components["Slider"]);
@@ -571,6 +651,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Label.TextColor3 = Theme.Description
 				end
 			end,
+			
+			["Options"] = function(Label)
+				if Label:IsA("TextLabel") and Label.Parent.Name == "Main" then
+					Label.TextColor3 = Theme.Title
+				end
+			end,
 
 			["TextLabel"] = function(Label)
 				if Label:IsA("TextLabel") and Label.Parent:FindFirstChild("List") then
@@ -622,6 +708,16 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Stroke.Color = Theme.Outline
 				end
 			end,
+			
+			["DropdownExample"] = function(Label)
+				Label.BackgroundColor3 = Theme.Secondary
+			end,
+			
+			["Underline"] = function(Label)
+				if Label:IsA("Frame") then
+					Label.BackgroundColor3 = Theme.Outline
+				end
+			end,
 		},
 
 		Classes = {
@@ -656,7 +752,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		Window.BackgroundColor3 = Theme.Primary
 		Holder.BackgroundColor3 = Theme.Secondary
 		Window.UIStroke.Color = Theme.Shadow
-		Sidebar.Top.Underline.BackgroundColor3 = Theme.Outline
 
 		for Index, Descendant in next, Window:GetDescendants() do
 			local Name, Class =  Themes.Names[Descendant.Name],  Themes.Classes[Descendant.ClassName]
@@ -666,6 +761,32 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			elseif Class then
 				Class(Descendant);
 			end
+		end
+	end
+	
+	--// Changing Settings
+
+	function Options:SetSetting(Setting, Value) --// Available settings - Size, Transparency, Blur, Theme
+		if Setting == "Size" then
+			Window.Size = Value
+			Setup.Size = Value
+		elseif Setting == "Transparency" then
+			Window.GroupTransparency = Value
+			Setup.Transparency = Value
+		elseif Setting == "Blur" then
+			if Value and not Blurs[Settings.Title] then
+				Blurs[Settings.Title] = Blur.new(Window, 5)
+				BlurEnabled = true
+			elseif not Value and Blurs[Settings.Title] then
+				Blurs[Settings.Title].root:Destroy()
+				BlurEnabled = false
+			end
+		elseif Setting == "Theme" and typeof(Value) == "table" then
+			Options:SetTheme(Value)
+		elseif Setting == "Keybind" then
+			Setup.Keybind = Value
+		else
+			warn("Tried to change a setting that doesn't exist or isn't available to change.")
 		end
 	end
 
