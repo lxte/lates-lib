@@ -65,6 +65,7 @@ local Player = {
 	GUI = LocalPlayer.PlayerGui;
 }
 
+local Type = nil
 local Tween = function(Object : Instance, Speed : number, Properties : {},  Info : { EasingStyle: Enum?, EasingDirection: Enum? })
 	local Style, Direction
 
@@ -108,6 +109,7 @@ end
 
 local Drag = function(Canvas)
 	if Canvas then
+		print(Type)
 		local Dragging;
 		local DragInput;
 		local Start;
@@ -119,7 +121,7 @@ local Drag = function(Canvas)
 		end
 
 		Connect(Canvas.InputBegan, function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch and not Type then
 				Dragging = true
 				Start = Input.Position
 				StartPosition = Canvas.Position
@@ -133,7 +135,7 @@ local Drag = function(Canvas)
 		end)
 
 		Connect(Canvas.InputChanged, function(Input)
-			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+			if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch and not Type then
 				DragInput = Input
 			end
 		end)
@@ -144,6 +146,68 @@ local Drag = function(Canvas)
 			end
 		end)
 	end
+end
+
+Resizing = { 
+	TopLeft = { X = Vector2.new(-1, 0),   Y = Vector2.new(0, -1)};
+	TopRight = { X = Vector2.new(1, 0),    Y = Vector2.new(0, -1)};
+	BottomLeft = { X = Vector2.new(-1, 0),   Y = Vector2.new(0, 1)};
+	BottomRight = { X = Vector2.new(1, 0),    Y = Vector2.new(0, 1)};
+}
+
+Resizable = function(Tab, Minimum, Maximum)
+	task.spawn(function()
+		local MousePos, Size, UIPos = nil, nil, nil
+
+		if Tab and Tab:FindFirstChild("Resize") then
+			local Positions = Tab:FindFirstChild("Resize")
+
+			for Index, Types in next, Positions:GetChildren() do
+				Connect(Types.InputBegan, function(Input)
+					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+						Type = Types
+						MousePos = Vector2.new(Player.Mouse.X, Player.Mouse.Y)
+						Size = Tab.AbsoluteSize
+						UIPos = Tab.Position
+					end
+				end)
+
+				Connect(Types.InputEnded, function(Input)
+					if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+						Type = nil
+					end
+				end)
+			end
+		end
+
+		local Resize = function(Delta)
+			if Type and MousePos and Size and UIPos and Tab:FindFirstChild("Resize")[Type.Name] == Type then
+				local Mode = Resizing[Type.Name]
+				local NewSize = Vector2.new(Size.X + Delta.X * Mode.X.X, Size.Y + Delta.Y * Mode.Y.Y)
+				NewSize = Vector2.new(math.clamp(NewSize.X, Minimum.X, Maximum.X), math.clamp(NewSize.Y, Minimum.Y, Maximum.Y))
+
+				local AnchorOffset = Vector2.new(Tab.AnchorPoint.X * Size.X, Tab.AnchorPoint.Y * Size.Y)
+				local NewAnchorOffset = Vector2.new(Tab.AnchorPoint.X * NewSize.X, Tab.AnchorPoint.Y * NewSize.Y)
+				local DeltaAnchorOffset = NewAnchorOffset - AnchorOffset
+
+				Tab.Size = UDim2.new(0, NewSize.X, 0, NewSize.Y)
+
+				local NewPosition = UDim2.new(
+					UIPos.X.Scale, 
+					UIPos.X.Offset + DeltaAnchorOffset.X * Mode.X.X,
+					UIPos.Y.Scale,
+					UIPos.Y.Offset + DeltaAnchorOffset.Y * Mode.Y.Y
+				)
+				Tab.Position = NewPosition
+			end
+		end
+
+		Connect(Player.Mouse.Move, function()
+			if Type then
+				Resize(Vector2.new(Player.Mouse.X, Player.Mouse.Y) - MousePos)
+			end
+		end)
+	end)
 end
 
 --// Setup [UI]
@@ -255,6 +319,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 	--// UI Blur & More
 	Drag(Window);
+	Resizable(Window, Vector2.new(391, 256), Vector2.new(9e9, 9e9))
 	Setup.Transparency = Settings.Transparency or 0
 	Setup.Size = Settings.Size
 	Setup.ThemeMode = Settings.Theme or "Dark"
