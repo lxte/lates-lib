@@ -23,15 +23,7 @@ local Setup = {
 	Size = nil,
 }
 
---[[
-	Primary = Color3.fromRGB(232, 232, 232),
-	Secondary = Color3.fromRGB(255, 255, 255),
-	Icon = Color3.fromRGB(100, 100, 100),
-	Title = Color3.fromRGB(0, 0, 0),
-	Description = Color3.fromRGB(100, 100, 100),
-]]
-
-local Theme = {
+local Theme = { --// (Dark Theme)
 	--// Frames:
 	Primary = Color3.fromRGB(30, 30, 30),
 	Secondary = Color3.fromRGB(35, 35, 35),
@@ -218,6 +210,8 @@ else
 	Blur = require(script.Blur)
 end
 
+Screen.Main.Visible = false
+
 xpcall(function()
 	Screen.Parent = game.CoreGui
 end, function() 
@@ -344,7 +338,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		else
 			Animations:Open(Window, Setup.Transparency)
 			Opened = true
-			task.wait(.1)
+
 			if BlurEnabled then
 				Blurs[Settings.Title].root.Parent = workspace.CurrentCamera
 			end
@@ -376,8 +370,8 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 	end
 
-	Services.Input.InputBegan:Connect(function(Input) 
-		if Input.KeyCode == Setup.Keybind then
+	Services.Input.InputBegan:Connect(function(Input, Focused) 
+		if Input == Setup.Keybind and not Focused then
 			Close()
 		end
 	end)
@@ -473,12 +467,36 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Visible = true;
 		});
 
-		Main.ScrollingFrame.Title.Text = Settings.Title
 		Tab.MouseButton1Click:Connect(function()
 			Options:SetTab(Tab.Name);
 		end)
 
 		return Main.ScrollingFrame
+	end
+	
+	--// Notifications
+	
+	function Options:Notify(Settings: { Title: string, Description: string, Duration: number }) 
+		local Notification = Clone(Components["Notification"]);
+		local Title, Description = Options:GetLabels(Notification);
+		local Timer = Notification["Timer"];
+		
+		SetProperty(Title, { Text = Settings.Title });
+		SetProperty(Description, { Text = Settings.Description });
+		SetProperty(Notification, {
+			Parent = Screen["Frame"],
+		})
+		
+		task.spawn(function() 
+			local Duration = Settings.Duration or 2
+			local Wait = task.wait;
+			
+			Animations:Open(Notification, Setup.Transparency, true); Tween(Timer, Duration, { Size = UDim2.new(0, 0, 0, 4) });
+			Wait(Duration);
+			Animations:Close(Notification);
+			Wait(1);
+			Notification:Destroy();
+		end)
 	end
 
 	--// Component Functions
@@ -536,34 +554,85 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddToggle(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
+	function Options:AddToggle(Settings: { Title: string, Description: string, Default: boolean, Tab: Instance, Callback: any }) 
 		local Toggle = Clone(Components["Toggle"]);
 		local Title, Description = Options:GetLabels(Toggle);
 
 		local On = Toggle["Value"];
 		local Main = Toggle["Main"];
 		local Circle = Main["Circle"];
-
-		Connect(Toggle.MouseButton1Click, function()
-			local Value = not On.Value
-
+		
+		local Set = function(Value)
 			if Value then
 				Tween(Main,   .2, { BackgroundColor3 = Color3.fromRGB(153, 155, 255) });
 				Tween(Circle, .2, { BackgroundColor3 = Color3.fromRGB(255, 255, 255), Position = UDim2.new(1, -16, 0.5, 0) });
-
 			else
 				Tween(Main,   .2, { BackgroundColor3 = Theme.Interactables });
 				Tween(Circle, .2, { BackgroundColor3 = Theme.Primary, Position = UDim2.new(0, 3, 0.5, 0) });
 			end
-
+			
 			On.Value = Value
+		end 
+
+		Connect(Toggle.MouseButton1Click, function()
+			local Value = not On.Value
+
+			Set(Value)
 			Settings.Callback(Value)
 		end)
 
-		Animations:Component(Toggle)
+		Animations:Component(Toggle);
+		Set(Settings.Default);
 		SetProperty(Title, { Text = Settings.Title });
 		SetProperty(Description, { Text = Settings.Description });
 		SetProperty(Toggle, {
+			Name = Settings.Title,
+			Parent = Settings.Tab,
+			Visible = true,
+		})
+	end
+	
+	function Options:AddKeybind(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
+		local Dropdown = Clone(Components["Keybind"]);
+		local Title, Description = Options:GetLabels(Dropdown);
+		local Bind = Dropdown["Main"].Options;
+		
+		local Mouse = { Enum.UserInputType.MouseButton1, Enum.UserInputType.MouseButton2, Enum.UserInputType.MouseButton3 }; 
+		local Types = { 
+			["Mouse"] = "Enum.UserInputType.MouseButton", 
+			["Key"] = "Enum.KeyCode." 
+		}
+		
+		Connect(Dropdown.MouseButton1Click, function()
+			local Time = tick();
+			local Detect, Finished
+			
+			SetProperty(Bind, { Text = "..." });
+			Detect = Connect(game.UserInputService.InputBegan, function(Key, Focused) 
+				local InputType = (Key.UserInputType);
+				
+				if not Finished and not Focused then
+					Finished = (true)
+					
+					if table.find(Mouse, InputType) then
+						Settings.Callback(Key);
+						SetProperty(Bind, {
+							Text = tostring(InputType):gsub(Types.Mouse, "MB")
+						})
+					elseif InputType == Enum.UserInputType.Keyboard then
+						Settings.Callback(Key);
+						SetProperty(Bind, {
+							Text = tostring(Key.KeyCode):gsub(Types.Key, "")
+						})
+					end
+				end 
+			end)
+		end)
+
+		Animations:Component(Dropdown);
+		SetProperty(Title, { Text = Settings.Title });
+		SetProperty(Description, { Text = Settings.Description });
+		SetProperty(Dropdown, {
 			Name = Settings.Title,
 			Parent = Settings.Tab,
 			Visible = true,
@@ -642,12 +711,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, Tab: Instance, Callback: any }) 
+	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, AllowDecimals: boolean, DecimalAmount: number, Tab: Instance, Callback: any }) 
 		local Slider = Clone(Components["Slider"]);
 		local Title, Description = Options:GetLabels(Slider);
 
 		local Main = Slider["Slider"];
-		local Amount = Main["Amount"].Input;
+		local Amount = Main["Main"].Input;
 		local Slide = Main["Slide"];
 		local Fire = Slide["Fire"];
 		local Fill = Slide["Highlight"];
@@ -655,18 +724,29 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 		local Active = false
 		local Value = 0
-
-		local Update = function() 
-			local Scale = (Player.Mouse.X - Slide.AbsolutePosition.X) / Slide.AbsoluteSize.X			
-			if Scale > 1 then
-				Scale = 1
-			elseif Scale < 0 then
-				Scale = 0
+		
+		local SetNumber = function(Number)
+			if Settings.AllowDecimals then
+				local Power = 10 ^ (Settings.DecimalAmount or 2)
+				Number = math.floor(Number * Power + 0.5) / Power
+			else
+				Number = math.round(Number)
 			end
+			
+			return Number
+		end
 
-			Value =  math.round(Scale * Settings.MaxValue)
+		local Update = function(Number)
+			local Scale = (Player.Mouse.X - Slide.AbsolutePosition.X) / Slide.AbsoluteSize.X			
+			Scale = (Scale > 1 and 1) or (Scale < 0 and 0) or Scale
+			
+			if Number then
+				Number = (Number > Settings.MaxValue and Settings.MaxValue) or (Number < 0 and 0) or Number
+			end
+			
+			Value = SetNumber(Number or (Scale * Settings.MaxValue))
 			Amount.Text = Value
-			Fill.Size = UDim2.fromScale(Scale, 1)
+			Fill.Size = UDim2.fromScale((Number and Number / Settings.MaxValue) or Scale, 1)
 			Settings.Callback(Value)
 		end
 
@@ -677,6 +757,10 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				Update()
 			until not Active
 		end
+		
+		Connect(Amount.FocusLost, function() 
+			Update(tonumber(Amount.Text) or 0)
+		end)
 
 		Connect(Fire.MouseButton1Down, Activate)
 		Connect(Services.Input.InputEnded, function(Input) 
@@ -739,6 +823,13 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Label.TextColor3 = Theme.Title
 				end
 			end,
+			
+			["Notification"] = function(Label)
+				if Label:IsA("CanvasGroup") then
+					Label.BackgroundColor3 = Theme.Primary
+					Label.UIStroke.Color = Theme.Outline
+				end
+			end,
 
 			["TextLabel"] = function(Label)
 				if Label:IsA("TextLabel") and Label.Parent:FindFirstChild("List") then
@@ -751,12 +842,16 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 					if Label.Parent == Window then
 						Label.BackgroundColor3 = Theme.Secondary
-					else
-						Label.BackgroundColor3 = Theme.Interactables
-
-						if Label:FindFirstChild("Circle") then
+					elseif Label.Parent:FindFirstChild("Value") then
+						local Toggle = Label.Parent.Value 
+						local Circle = Label:FindFirstChild("Circle")
+						
+						if not Toggle.Value then
+							Label.BackgroundColor3 = Theme.Interactables
 							Label.Circle.BackgroundColor3 = Theme.Primary
 						end
+					else
+						Label.BackgroundColor3 = Theme.Interactables
 					end
 				elseif Label:FindFirstChild("Padding") then
 					Label.TextColor3 = Theme.Title
@@ -803,7 +898,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		},
 
 		Classes = {
-
 			["ImageLabel"] = function(Label)
 				if Label.Image ~= "rbxassetid://6644618143" then
 					Label.ImageColor3 = Theme.Icon
@@ -835,7 +929,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		Holder.BackgroundColor3 = Theme.Secondary
 		Window.UIStroke.Color = Theme.Shadow
 
-		for Index, Descendant in next, Window:GetDescendants() do
+		for Index, Descendant in next, Screen:GetDescendants() do
 			local Name, Class =  Themes.Names[Descendant.Name],  Themes.Classes[Descendant.ClassName]
 
 			if Name then
@@ -850,23 +944,46 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 	function Options:SetSetting(Setting, Value) --// Available settings - Size, Transparency, Blur, Theme
 		if Setting == "Size" then
+			
 			Window.Size = Value
 			Setup.Size = Value
+			
 		elseif Setting == "Transparency" then
+			
 			Window.GroupTransparency = Value
 			Setup.Transparency = Value
+			
+			for Index, Notification in next, Screen:GetDescendants() do
+				if Notification:IsA("CanvasGroup") and Notification.Name == "Notification" then
+					Notification.GroupTransparency = Value
+				end
+			end
+			
 		elseif Setting == "Blur" then
-			if Value and not Blurs[Settings.Title] then
-				Blurs[Settings.Title] = Blur.new(Window, 5)
+			
+			local Blurs, Root = Blurs[Settings.Title], Blurs[Settings.Title]["root"]
+			
+			if Value then
 				BlurEnabled = true
-			elseif not Value and Blurs[Settings.Title] then
-				Blurs[Settings.Title].root:Destroy()
+
+				if not Blur then
+					Blurs[Settings.Title] = Blur.new(Window, 5)
+				elseif Root and not Root.Parent then
+					Root.Parent = workspace.CurrentCamera
+				end
+			elseif not Value and (Blurs and Root and Root.Parent) then
+				Root.Parent = nil
 				BlurEnabled = false
 			end
+			
 		elseif Setting == "Theme" and typeof(Value) == "table" then
+			
 			Options:SetTheme(Value)
+			
 		elseif Setting == "Keybind" then
+			
 			Setup.Keybind = Value
+			
 		else
 			warn("Tried to change a setting that doesn't exist or isn't available to change.")
 		end
