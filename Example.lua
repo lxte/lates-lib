@@ -1,10 +1,16 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/lxte/lates-lib/main/Main.lua"))()
+--// Services
+local UserInputService = game:GetService("UserInputService");
+
+--// Library
+local Library = require(script.Parent)
 local Window = Library:CreateWindow({
 	Title = "???",
-	Size = UDim2.fromOffset(500, 300),
-	Transparency = 0.05,
-	Blurring = false,
 	Theme = "Dark",
+	
+	Size = UDim2.fromOffset(570, 370),
+	Transparency = 0.2,
+	Blurring = true,
+	MinimizeKeybind = Enum.KeyCode.LeftAlt,
 })
 
 local Themes = {
@@ -47,8 +53,8 @@ local Themes = {
 		--// Image:
 		Icon = Color3.fromRGB(220, 220, 220),
 	},
-
-    Void = {
+	
+	Void = {
 		--// Frames:
 		Primary = Color3.fromRGB(15, 15, 15),
 		Secondary = Color3.fromRGB(20, 20, 20),
@@ -70,8 +76,10 @@ local Themes = {
 
 }
 
---// Sections
+--// Set the default theme
+Window:SetTheme(Themes.Dark)
 
+--// Sections
 Window:AddTabSection({
 	Name = "Main",
 	Order = 1,
@@ -87,6 +95,7 @@ Window:AddTabSection({
 local Main = Window:AddTab({
 	Title = "Components",
 	Section = "Main",
+	Icon = "rbxassetid://11963373994"
 })
 
 Window:AddSection({ Name = "Non Interactable", Tab = Main }) 
@@ -100,19 +109,22 @@ Window:AddParagraph({
 
 Window:AddSection({ Name = "Interactable", Tab = Main }) 
 
-
 Window:AddButton({
 	Title = "Button",
-	Description = "clicking",
+	Description = "I wonder what this does",
 	Tab = Main,
 	Callback = function() 
-		warn("You have pressed the button!");
+		Window:Notify({
+			Title = "hi",
+			Description = "i'm a notification", 
+			Duration = 5
+		})
 	end,
 }) 
 
 Window:AddSlider({
 	Title = "Slider",
-	Description = "sliding",
+	Description = "Sliding",
 	Tab = Main,
 	MaxValue = 100,
 	Callback = function(Amount) 
@@ -122,7 +134,7 @@ Window:AddSlider({
 
 Window:AddToggle({
 	Title = "Toggle",
-	Description = "switchy",
+	Description = "Switching",
 	Tab = Main,
 	Callback = function(Boolean) 
 		warn(Boolean);
@@ -131,41 +143,99 @@ Window:AddToggle({
 
 Window:AddInput({
 	Title = "Input",
-	Description = "dont",
+	Description = "Typing",
 	Tab = Main,
 	Callback = function(Text) 
 		warn(Text);
 	end,
 }) 
 
---// Tab [SETTINGS]
-
-local Edit = Window:AddTab({
-	Title = "Edit",
-	Section = "Settings",
-	Icon = "rbxassetid://11432847075",
-})
 
 Window:AddDropdown({
-	Title = "Test",
-	Description = "PLease select",
-	Tab = Edit,
+	Title = "Dropdown",
+	Description = "Selecting",
+	Tab = Main,
 	Options = {
-		["This is the name!"] = "And this is the value that gets sent!",
-		
-		
-		["aahhahaha"] = "Value",
-		["cocos pov dropdown"] = "whos cocos pov",
-		["HMMM"] = "i clciked hmmm",
-		["Lol."] = "lol lol",
-		["hello"] = "hi",
-		["wha tthe"] = "what",
-		["brrbrbbr"] = "brrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr",
-
+		["An Option"] = "hi",
+		["And another"] = "hi",
+		["Another"] = "hi",
 	},
-	Callback = function(Option) 
-		warn(Option)
+	Callback = function(Number) 
+		warn(Number);
 	end,
 }) 
 
-Window:SetTheme(Themes.Void)
+Window:AddKeybind({
+	Title = "Keybind",
+	Description = "Binding",
+	Tab = Main,
+	Callback = function(Key) 
+		warn("Key Set")
+	end,
+}) 
+
+--// Tab [SETTINGS]
+local Keybind = nil
+local Settings = Window:AddTab({
+	Title = "Settings",
+	Section = "Settings",
+	Icon = "rbxassetid://11293977610",
+})
+
+Window:AddKeybind({
+	Title = "Minimize Keybind",
+	Description = "Set the keybind for Minimizing",
+	Tab = Settings,
+	Callback = function(Key) 
+		Window:SetSetting("Keybind", Key)
+	end,
+}) 
+
+Window:AddDropdown({
+	Title = "Set Theme",
+	Description = "Set the theme of the library!",
+	Tab = Settings,
+	Options = {
+		["Light Mode"] = "Light",
+		["Dark Mode"] = "Dark",
+		["Extra Dark"] = "Void",
+	},
+	Callback = function(Theme) 
+		Window:SetTheme(Themes[Theme])
+	end,
+}) 
+
+Window:AddToggle({
+	Title = "UI Blur",
+	Description = "If enabled, must have your Roblox graphics set to 8+ for it to work",
+	Default = true,
+	Tab = Settings,
+	Callback = function(Boolean) 
+		Window:SetSetting("Blur", Boolean)
+	end,
+}) 
+
+
+Window:AddSlider({
+	Title = "UI Transparency",
+	Description = "Set the transparency of the UI",
+	Tab = Settings,
+	AllowDecimals = true,
+	MaxValue = 1,
+	Callback = function(Amount) 
+		Window:SetSetting("Transparency", Amount)
+	end,
+}) 
+
+Window:Notify({
+	Title = "Hello World!",
+	Description = "Press Left Alt to Minimize and Open the tab!", 
+	Duration = 10
+})
+
+--// Keybind Example
+UserInputService.InputBegan:Connect(function(Key) 
+	if Key == Keybind then
+		warn("You have pressed the minimize keybind!");
+	end
+end)
