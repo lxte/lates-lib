@@ -2,7 +2,7 @@
 local UserInputService = game:GetService("UserInputService");
 
 --// Library
-local Library = require(script.Parent)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/lxte/lates-lib/main/Main.lua"))()
 local Window = Library:CreateWindow({
 	Title = "???",
 	Theme = "Dark",
