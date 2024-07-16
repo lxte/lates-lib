@@ -371,7 +371,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	end
 
 	Services.Input.InputBegan:Connect(function(Input, Focused) 
-		if Input == Setup.Keybind and not Focused then
+		if (Input.KeyCode == Setup.Keybind or Input == Setup.Keybind) and not Focused then
 			Close()
 		end
 	end)
