@@ -371,7 +371,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	end
 
 	Services.Input.InputBegan:Connect(function(Input, Focused) 
-		if (Input.KeyCode == Setup.Keybind or Input == Setup.Keybind) and not Focused then
+		if Input == Setup.Keybind and not Focused then
 			Close()
 		end
 	end)
@@ -961,17 +961,21 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			
 		elseif Setting == "Blur" then
 			
-			local Blurs, Root = Blurs[Settings.Title], Blurs[Settings.Title]["root"]
+			local AlreadyBlurred, Root = Blurs[Settings.Title], nil
+			
+			if AlreadyBlurred then
+				Root = Blurs[Settings.Title]["root"]
+			end
 			
 			if Value then
 				BlurEnabled = true
 
-				if not Blur then
+				if not AlreadyBlurred or not Root then
 					Blurs[Settings.Title] = Blur.new(Window, 5)
 				elseif Root and not Root.Parent then
 					Root.Parent = workspace.CurrentCamera
 				end
-			elseif not Value and (Blurs and Root and Root.Parent) then
+			elseif not Value and (AlreadyBlurred and Root and Root.Parent) then
 				Root.Parent = nil
 				BlurEnabled = false
 			end
